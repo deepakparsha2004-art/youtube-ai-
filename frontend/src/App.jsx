@@ -1,6 +1,4 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from './context/AuthContext'
-import LoginScreen from './components/common/LoginScreen'
 import DashboardLayout from './layouts/DashboardLayout'
 import Overview from './pages/Overview'
 import ScriptStudio from './pages/ScriptStudio'
@@ -16,13 +14,6 @@ import APISettings from './pages/APISettings'
 import UserProfile from './pages/UserProfile'
 
 export default function App() {
-  const { user, loading, authRequired } = useAuth()
-
-  if (authRequired && loading) {
-    return <main aria-label="Loading" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>Loading…</main>
-  }
-  if (authRequired && !user) return <LoginScreen />
-
   return (
     <Routes>
       <Route path="/" element={<DashboardLayout />}>

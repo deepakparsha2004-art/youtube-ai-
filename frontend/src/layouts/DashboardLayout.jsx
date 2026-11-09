@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileText, Mic, Video, Image, Youtube, Upload,
-  Calendar, Settings, History, Key, User, Menu, X, Sparkles, Laptop, LogOut
+  Calendar, Settings, History, Key, User, Menu, X, Sparkles, Laptop
 } from 'lucide-react'
 import { useState } from 'react'
 import clsx from 'clsx'
@@ -25,7 +25,7 @@ const navItems = [
 export default function DashboardLayout() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
-  const { user, logout, authRequired } = useAuth()
+  const { user } = useAuth()
   const currentPage = navItems.find((item) => item.to === location.pathname)?.label || 'Workspace'
 
   return (
@@ -67,7 +67,7 @@ export default function DashboardLayout() {
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{user?.username || 'Local workspace'}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{authRequired ? 'Signed in' : 'No sign-in required'}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>No sign-in required</div>
           </div>
         </div>
       </aside>
@@ -85,11 +85,6 @@ export default function DashboardLayout() {
           <span className="yc-pill yc-pill-workspace">
             <Laptop size={13} /> Local
           </span>
-          {authRequired && (
-            <button type="button" className="yc-btn" onClick={logout} aria-label="Sign out" title="Sign out">
-              <LogOut size={16} /> Sign out
-            </button>
-          )}
         </header>
 
         <div className="yc-content">
