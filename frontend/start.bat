@@ -1,0 +1,3 @@
+@echo off
+echo Starting YouTube AI Frontend...
+npm run dev

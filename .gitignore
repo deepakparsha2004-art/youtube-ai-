@@ -1,0 +1,27 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local data and generated media
+backend/youtube_ai.db
+backend/generated/
+backend/uploads/
+backend/*.mp4
+backend/*.mp3
+
+# Frontend build and dependencies
+frontend/node_modules/
+frontend/dist/
+
+# Local editor state
+.vscode/
