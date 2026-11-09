@@ -109,8 +109,8 @@ copy .env.example .env
 For Google sign-in, add the login callback URI to the same Google OAuth client's
 authorized redirect URIs. For GitHub, create an OAuth App with the backend
 callback URL as its Authorization callback URL. Set the production callback
-URLs to your Render service's HTTPS origin and configure the client ID/secret
-in Render. Both providers require a verified email address.
+URLs to your Python API host's HTTPS origin and configure the client ID/secret
+in that host. Both providers require a verified email address.
 
 ### Run backend
 
@@ -210,48 +210,55 @@ No account is required to use the local dashboard. Open http://localhost:5173 to
 - Use a real job queue (Celery + Redis) for long video renders and schedules
 - Never expose `.env` or generated media without auth in production
 
-### Render backend (Step 2)
+### Railway Python backend (Step 2)
 
-The root `render.yaml` configures the Python service. Push the repository to GitHub,
-then in Render choose **New → Blueprint**, select that repository, and apply the
-blueprint. Set the prompted `DEFAULT_PASSWORD` to a unique password of at least
-12 characters. Render generates `SECRET_KEY`; do not replace it with a committed
-value. The backend refuses to start in production if guest access is enabled, the
-secret key is unchanged/too short, or the default admin password is still in use.
+The backend is a Python/FastAPI application. Deploy it as a Railway service from
+this GitHub repository:
 
-After deployment, the API URL is the Render service URL (for example,
-`https://your-service.onrender.com`); check `/health` and `/docs`. The initial
-administrator username is `admin`, and its password is the `DEFAULT_PASSWORD`
-you entered in Render. Public registration is disabled in production.
+1. In Railway, create a project from the GitHub repository and set the service's
+   **Root Directory** to `/backend`.
+2. Set the build command to `pip install -r requirements.txt` and the start
+   command to `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+3. Configure the service variables before deployment:
+   - `DEBUG=false`
+   - `ALLOW_GUEST_ACCESS=false`
+   - `SECRET_KEY` to a unique random value of at least 32 characters
+   - `DEFAULT_PASSWORD` to a unique password of at least 12 characters
+   - `DATABASE_URL` to the Supabase PostgreSQL Session Pooler URL
+   - `FRONTEND_URL` to the Netlify production origin
+   - Google/GitHub OAuth client IDs, secrets, and callback URLs if using social
+     sign-in or YouTube upload
+4. Generate a Railway public domain. The backend URL is
+   `https://YOUR-RAILWAY-DOMAIN`; verify `/health` and `/docs`.
+5. Register these exact callback URLs with Google and GitHub, and set their
+   matching Railway variables:
+   - Google sign-in: `https://YOUR-RAILWAY-DOMAIN/api/v1/auth/google/callback`
+   - GitHub sign-in: `https://YOUR-RAILWAY-DOMAIN/api/v1/auth/github/callback`
+   - Google YouTube access: `https://YOUR-RAILWAY-DOMAIN/api/v1/youtube/oauth/callback`
 
-For the Netlify frontend, set `VITE_AUTH_REQUIRED=true` and
-`VITE_API_BASE_URL=https://your-service.onrender.com/api/v1` in the Netlify
-build environment. In Render, set `FRONTEND_URL` to the deployed Netlify origin.
-If using YouTube OAuth, set `GOOGLE_REDIRECT_URI` to
-`https://your-service.onrender.com/api/v1/youtube/oauth/callback` and register
-that exact URI in Google Cloud.
-
-The free service can sleep while idle. Ollama is not included on Render; configure
-a reachable hosted LLM endpoint before using features that require Ollama.
+The initial administrator username is `admin`, and its password is the
+`DEFAULT_PASSWORD` set in Railway. Public registration is disabled in
+production. Configure a reachable hosted LLM endpoint; Ollama is not included
+with the backend service.
 
 ### Supabase PostgreSQL (Step 3)
 
 1. Create a Supabase project and save its database password securely.
 2. In the Supabase dashboard, open **Connect** and choose the **Session pooler**
    connection string (not the direct database URL). Keep the URL private.
-3. In the Render service's environment settings, set `DATABASE_URL` to that
+3. In the Railway service's environment settings, set `DATABASE_URL` to that
    PostgreSQL connection string. Do not put it in source control or share it in
    chat. The backend adds `sslmode=require` if the URL does not already specify
    an SSL mode.
 4. The service creates its application tables on startup. A production startup
    fails unless `DATABASE_URL` uses PostgreSQL, so it will not silently fall back
    to an ephemeral SQLite database.
-5. Redeploy and verify `/health`; check Render logs for a successful startup.
+5. Redeploy and verify `/health`; check Railway logs for a successful startup.
    Never paste the database URL into logs or screenshots.
 
 The local developer default remains SQLite. Existing local SQLite data is not
 automatically copied to Supabase; the new Supabase database starts with the
-default `admin` account created from Render's `DEFAULT_PASSWORD`.
+default `admin` account created from Railway's `DEFAULT_PASSWORD`.
 
 ### Netlify frontend (Step 4)
 
@@ -262,44 +269,43 @@ The root `netlify.toml` is configured for this repository layout: it builds from
    the GitHub repository. Netlify will detect the root `netlify.toml`.
 2. Set these site environment variables before deploying:
    - `VITE_AUTH_REQUIRED=true`
-   - `VITE_API_BASE_URL=https://YOUR-RENDER-SERVICE.onrender.com/api/v1`
+   - `VITE_API_BASE_URL=https://YOUR-RAILWAY-DOMAIN/api/v1`
 3. Deploy and copy the Netlify site origin (for example,
    `https://YOUR-SITE.netlify.app`).
-4. Set Render's `FRONTEND_URL` to the Netlify origin and redeploy the backend
+4. Set Railway's `FRONTEND_URL` to the Netlify origin and redeploy the backend
    so its CORS allowlist and OAuth return URL use Netlify.
 5. Redeploy on Netlify whenever its build environment variables change.
 
-The Netlify site uses the Render API and Supabase database. Keep provider
-secrets only in Render.
+The Netlify site uses the Railway API and Supabase database. Keep provider
+secrets only in Railway.
 
 ### Final testing (Step 5)
 
-Run these checks after Netlify, Render, and Supabase are connected:
+Run these checks after Netlify, Railway, and Supabase are connected:
 
-1. Open `https://YOUR-RENDER-SERVICE.onrender.com/health`; expect
+1. Open `https://YOUR-RAILWAY-DOMAIN/health`; expect
    `{"status":"healthy"}`.
-2. Open `https://YOUR-RENDER-SERVICE.onrender.com/docs`; expect the FastAPI
+2. Open `https://YOUR-RAILWAY-DOMAIN/docs`; expect the FastAPI
    documentation to load.
 3. In a private/incognito browser, open the Netlify site. The sign-in screen
    should appear. Verify an unauthenticated request such as
    `GET /api/v1/scripts/` returns `401`, then sign in as `admin` using the
-   `DEFAULT_PASSWORD` saved in Render.
+   `DEFAULT_PASSWORD` saved in Railway.
 4. Verify the dashboard loads, create and list a script, then reload the page
    and confirm the session stays signed in. Sign out and confirm the login
    screen returns.
 5. In Supabase, verify the application tables exist after the backend has
    started. Create a test record through the app and confirm it persists after
-   a Render restart/redeploy.
+   a Railway restart/redeploy.
 6. If testing media, generate a voice preview and confirm audio plays; video
    generation needs working external model/stock-footage services and persistent
-   media storage. Do not treat ephemeral Render filesystem storage as durable.
-7. Check the browser console and Render logs for CORS, 401/500, or database
+   media storage. Do not treat ephemeral Railway filesystem storage as durable.
+7. Check the browser console and Railway logs for CORS, 401/500, or database
    connection errors. Do not include passwords, tokens, or database URLs in
    screenshots or shared logs.
 
 The local frontend production build was verified during development. End-to-end
-cloud tests cannot pass until a GitHub remote, deployed Render URL, and Netlify
-deployment are available.
+cloud tests cannot pass until the Railway API and Netlify frontend are deployed.
 
 ---
 
