@@ -304,8 +304,11 @@ Run these checks after Netlify, Railway, and Supabase are connected:
    connection errors. Do not include passwords, tokens, or database URLs in
    screenshots or shared logs.
 
-The local frontend production build was verified during development. End-to-end
-cloud tests cannot pass until the Railway API and Netlify frontend are deployed.
+The Netlify frontend is published at
+https://youtube-ai-command-center.netlify.app. Its sign-in screen is live, but
+sign-in and API-backed features require the Railway API to be deployed and
+`VITE_API_BASE_URL` to be set in Netlify. End-to-end cloud tests are still
+pending that backend configuration.
 
 ---
 
